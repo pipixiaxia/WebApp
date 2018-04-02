@@ -1,0 +1,33 @@
+#scrollCon {
+  margin-top: 50px;
+}
+#scrollCon li:after {
+  left: 0;
+}
+#scrollCon h3 {
+  font-size: 18px;
+  font-family: "微软雅黑";
+  font-weight: 400;
+}
+#scrollCon .posi {
+  font-size: 14px;
+  color: #979797;
+}
+#scrollCon .posi span.fl {
+  padding-top: 16px;
+}
+#scrollCon .posi .mui-icon {
+  font-family: Muiicons;
+  font-size: 16px;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1;
+  display: inline-block;
+  text-decoration: none;
+  -webkit-font-smoothing: antialiased;
+  color: #21bdf9;
+}
+#scrollCon .posi .posibtn {
+  padding-top: 16px;
+  width: 90px;
+}

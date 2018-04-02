@@ -1,0 +1,220 @@
+<!VDNDOC "PageBase":"nvo_bi","IniEvent":"PageIni","NotClientCache":true>
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no,maximum-scale=1,minimum-scale=1">
+		<meta http-equiv="pragma" content="no-cache" />
+		<meta http-equiv="cache-control" content="no-cache" />
+		<meta http-equiv="expires" content="0" />
+		<title>农家云</title>
+		<link rel="stylesheet" type="text/css" href="css/base.css" />
+		<link rel="stylesheet" href="css/mui.min.css">
+		<link rel="stylesheet" href="css/pierceQueryResult.css" />
+	</head>
+
+	<body>
+		<div class="mui-inner-wrap">
+			<header id="header" class="mui-bar mui-bar-nav">
+				<a class="mui-action-back mui-icon mui-icon-back mui-pull-left"></a>
+				<h1 class="mui-title"></h1>
+			</header>
+			<div id="wrapper">
+				<div id="scroller">
+					<div id="pullDown">
+						<span class="pullDownLabel">下拉刷新</span>
+					</div>
+					<div id="table-count">
+						<div id="main" style="width: 100%;height:300px;margin: 0 auto;"></div>
+						<table cellspacing="0" cellpadding="0">
+
+						</table>
+					</div>
+					<div id="pullUp">
+						<span class="pullUpLabel"></span>
+					</div>
+				</div>
+			</div>
+			<div class="mui-off-canvas-backdrop"></div>
+		</div>
+		<script src="js/mui.min.js"></script>
+		<script src="js/mui-init.js"></script>
+		<script src="js/jquery-2.1.4.min.js"></script>
+		<script src="js/vdn.js"></script>
+		<script src="js/iscroll.js"></script>
+		<script src="js/iscroll-option.js"></script>
+		<script src="js/demoUtils.js"></script>
+		<script src="js/echarts.js"></script>
+		<script src="js/global.js"></script>
+		<script>
+			var loadCurrentPage = 1;
+			var pageSize = 30;
+
+			//初始状态，加载数据  
+			function loadAction() {
+				var sjcName = localStorage.getItem("sjcName");
+				var newDateObj = localStorage.getItem("newDateObj");
+				loadCurrentPage = 1;
+				mui.plusReady(function(){
+					plus.nativeUI.showWaiting("", {
+						background: "#ccc"
+					});
+				});
+				vdn.post({
+						"method": "nvo_bi.get_dw_echarts",
+						"params": [sjcName, newDateObj]
+					},
+					function(data) {
+						if(data.Result == "") {
+							setTimeout(function() {
+								plus.nativeUI.closeWaiting();
+							}, 200);
+							mui.toast("无数据");
+						} else {
+							createDom(data);
+						}
+					},
+					function(err) {
+						alert("Code:" + err.Code + ", Message" + err.Message);
+					});
+				myScroll.refresh();
+			}
+
+			//下拉刷新当前数据  
+			function pullDownAction() {
+				setTimeout(function() {
+					loadAction();
+				}, 200);
+			}
+
+			//上拉加载更多数据  
+			function pullUpAction(bool) {
+				var localallDataLen = JSON.parse(localStorage.getItem("queryResult")).data.length;
+				var domLoadLength = $("tbody").children().length;
+				if(localallDataLen == domLoadLength) {
+					$("#pullUp").children(".pullUpLabel").html("没有更多了");
+					return;
+				}
+				setTimeout(function() {
+					if(bool === undefined) {
+						var getNewData = getLocalToData(++loadCurrentPage, pageSize);
+						getResult(getNewData, JSON.parse(localStorage.getItem("queryResult")));
+					}
+					myScroll.refresh();
+				}, 400);
+			}
+
+			function createDom(data) {
+				plus.nativeUI.closeWaiting();
+				//echarts
+				var mainBox = document.getElementById('main');
+				var myChart = echarts.init(mainBox);
+				var option = JSON.parse(data.Result);
+				if(option.echarts[0] === "") {
+					mainBox.style.display = 'none';
+				} else {
+					myChart.clear();
+					myChart.setOption(option.echarts[0]);
+				}
+				//表格
+				$("table").empty();
+				var label = JSON.parse(data.Result).label;
+				var font = JSON.parse(data.Result).font;
+				var tjsm = JSON.parse(data.Result).tjsm;
+				var title = JSON.parse(data.Result).title;
+				//动态添加标题
+				$("header").children("h1").html(title);
+				//创建thead、tbody
+				var thead = "";
+				var tbody = "";
+				thead += "<thead id='thead'>";
+				thead += "<tr>";
+				thead += "<td style='font-size:" + font[0] + "px;background:#fff;color:#828888;text-align:center' colspan='"+label.length+"'>" + tjsm + "</td>";
+				thead += "</tr>";
+				thead += "<tr>";
+				label.forEach(function(item, index) {
+					thead += "<th style='font-size:" + font[index] + "px;'>" + item + "</th>";
+				});
+				thead += "</tr>";
+				thead += "</thead>";
+				tbody += "<tbody id='tbody'></tbody>";
+				$("table").append(thead).append(tbody);
+				localStorage.setItem("queryResult", data.Result);
+				//					第1页15条数据
+				var getNewData = getLocalToData(loadCurrentPage, pageSize);
+				getResult(getNewData, JSON.parse(data.Result));
+				myScroll.refresh();
+				pullUpAction(false);
+			}
+
+			//			每次加载查询筛选都先从本地获取数据
+			function getLocalToData(currentPage, pageSize) {
+				var localData = JSON.parse(localStorage.getItem("queryResult")).data;
+				var newData = []; //分段存储数据
+				for(var i = (currentPage - 1) * pageSize; i < (currentPage - 1) * pageSize + pageSize; i++) {
+					if(localData[i] === undefined) {
+						break;
+					};
+					newData.push(localData[i]);
+				}
+				return [newData];
+			}
+
+			function getResult(dataArr, allData) {
+				console.log(allData)
+				var font = allData.font;
+				//创建tbody
+				var tr = "";
+				if(allData.dw === "true") { //是否穿透
+					dataArr[0].forEach(function(item, index) {
+						tr += "<tr  sjcName='" + item[item.length - 1].split("`")[0] + "' spbh='" + item[item.length - 1].split("`")[1] + "' flag='" + item[0] + "' class='trBtn bgcolor" + item[0] + "'>"
+						for(var i = 1; i < item.length - 1; i++) {
+							tr += "<td class='textAlign" + allData.alignment[i - 1] + "' style='font-size:" + font[i - 1] + "px; width:" + allData.col_width[i - 1] + "'>" + item[i] + "</td>";
+						};
+						tr += "</tr>";
+					});
+				} else {
+					dataArr[0].forEach(function(item, index) {
+						tr += "<tr class='trBtn bgcolor" + item[0] + "'>"
+						for(var i = 1; i < item.length; i++) {
+							tr += "<td class='textAlign" + allData.alignment[i - 1] + "' style='font-size:" + font[i - 1] + "px; width:" + allData.col_width[i - 1] + "'>" + item[i] + "</td>";
+						};
+						tr += "</tr>";
+					});
+				}
+				$("#tbody").append(tr);
+			}
+
+			//点击表格一行跳转页面
+			var bgcolor = "";
+			mui("table").on("touchstart", '.trBtn', function() {
+				bgcolor = this.style.backgroundColor;
+				this.style.backgroundColor = '#e7e7e7';
+			});
+			mui("table").on("touchend", '.trBtn', function() {
+				this.style.backgroundColor = bgcolor;
+			});
+			mui("table").on("tap", '.trBtn', function() {
+				var queryResult = JSON.parse(localStorage.getItem("queryResult"));
+				var flag = this.getAttribute("flag");
+				if(queryResult.dw && flag === "0") { //去掉非穿透、小计、合计
+					var sjcName = this.getAttribute("sjcName");
+					var spbh = this.getAttribute("spbh");
+					var newDateObj = JSON.parse(localStorage.getItem("newDateObj"));
+					newDateObj["penetrate"] = spbh;
+					localStorage.setItem("sjcName", sjcName); //存数据窗名
+					localStorage.setItem("newDateObj", JSON.stringify(newDateObj));//存统计条件
+					loadAction();//重新加载
+				}
+			});
+		</script>
+
+		<script>
+			$('.mui-inner-wrap').on('drag', function(event) {
+				event.stopPropagation();
+			});
+		</script>
+	</body>
+
+</html>

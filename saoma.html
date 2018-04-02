@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+		<title>农佳云</title>
+		<link rel="stylesheet" type="text/css" href="css/mui.min.css" />
+		<link rel="stylesheet" type="text/css" href="css/base.css" />
+		<style>
+			body {
+				background-color: #000;
+			}
+			
+			* {
+				margin: 0;
+				padding: 0;
+			}
+			
+			#bcid {
+				height: 400px;
+				margin: 0 auto;
+				margin-top: 44px;
+			}
+			
+			#box {
+				position: fixed;
+				bottom: 0;
+				width: 100%;
+			}
+			
+			#box,
+			ul {
+				height: 90px;
+				background-color: #000;
+			}
+			
+			li {
+				width: 50%;
+				height: 90px;
+				text-align: center;
+				color: #ccc;
+				line-height: 90px;
+				border-bottom: 1px solid #999;
+			}
+			
+			li~li {
+				border-left: 1px solid #999;
+			}
+		</style>
+	</head>
+
+	<body>
+		<header id="header" class="mui-bar mui-bar-nav">
+			<a id="backBtn" class="mui-action-back mui-icon mui-icon-left-nav mui-pull-left"></a>
+			<h1 class="mui-title">扫码</h1>
+			<a id="flashLamp" class="mui-icon mui-icon-spinner-cycle mui-spin mui-pull-right"></a>
+		</header>
+		<div id="bcid"></div>
+		<div id="box">
+			<ul>
+				<li id="smBtn" class="fl">扫码</li>
+				<li id="fromXc" class="fl">从相册选取</li>
+			</ul>
+		</div>
+		<script src="js/mui.min.js"></script>
+		<script>
+			document.addEventListener("plusready", function() {
+				var scan = null;
+				//开始扫码
+				function start() {
+					var filter;
+					var styles = {
+						frameColor: "#ccc",
+						scanbarColor: "#ccc",
+						background: "#000"
+					};
+					scan = new plus.barcode.Barcode("bcid", filter, styles);
+					scan.onmarked = onmarked;
+					scan.start({
+						conserve: true,
+						vibrate: true
+					});
+				}
+				start();
+
+				//扫码识别成功
+				function onmarked(type, result, file) {
+					var text = '未知: ';
+					switch(type) {
+						case plus.barcode.QR:
+							text = 'QR: ';
+							break;
+						case plus.barcode.EAN13:
+							text = 'EAN13: ';
+							break;
+						case plus.barcode.EAN8:
+							text = 'EAN8: ';
+							break;
+					}
+					alert(text + result);
+					//保存到相册
+					plus.gallery.save(file, function() {
+						mui.toast("保存到相册");
+						scan.close();
+					});
+				}
+				
+				//扫码按钮
+				document.getElementById("smBtn").addEventListener("touchstart", function(){
+					scan.close();
+					start();
+				});
+				
+				//从相册选取
+				document.getElementById("fromXc").addEventListener("touchstart", function(){
+					plus.gallery.pick(function(path){
+						plus.barcode.scan(path, function(type, code, file){
+							alert(type+"----"+code+"----"+file);
+						}, function(err){
+							alert(err.code+":"+err.message);
+						});
+					});
+				});
+				
+				//开关闪光灯
+				var open = false;
+				document.getElementById("flashLamp").addEventListener("touchstart", function(){
+					if(!open){
+						open = true;
+					}else {
+						open = false;
+					}
+					scan.setFlash(open);
+				});
+				
+				//监听返回按钮，防止闪退
+				plus.key.addEventListener('backbutton', function(){
+					scan.close();
+				}, false);
+				mui("header").on('tap', '#backBtn', function(){
+					scan.close();
+				});
+			});
+		</script>
+	</body>
+
+</html>
